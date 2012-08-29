@@ -1,15 +1,27 @@
 <?php
 /*
 	AWSTATS DATA FILE PARSER / MERGER / GENERATOR ==============================
-	@version: 1.0
-	@date: 2010-06-19
+	@version: 1.1
+	@date: 2012-08-29
 	@author: Aaron van Geffen
 	@website: http://aaronweb.net/
 	@license: BSD
 
+	VERSION HISTORY ============================================================
+	version 1.1 (2012-08-29)
+	* Removed unnecessary call-time pass-by-references;
+	* Added newlines to error messages;
+
+	version 1.0 (2010-06-19)
+	* Initial release.
+
 	TODO =======================================================================
-	* import mode: only add unique missing data, or merge all data
-	* prefixes and suffixes for URLs on import, i.e. adding /projects as a prefix
+	* Import mode: only add unique missing data, or merge all data
+	* Prefixes and suffixes for URLs on import, i.e. adding /projects as a prefix
+
+	PATCHES / PULL REQUESTS ====================================================
+	Are most welcome through Github. The repository is located at:
+	https://github.com/AaronVanGeffen/AwstatsParser
 */
 
 // Not running PHP-CLI?
