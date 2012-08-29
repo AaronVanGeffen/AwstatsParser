@@ -52,7 +52,7 @@ echo $stats->getFileContents();
  */
 abstract class AwstatsFile
 {
-	protected $data = array();
+	public $data = array();
 
 	public function getFileContents()
 	{
