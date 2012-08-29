@@ -351,7 +351,7 @@ class AwstatsMerger extends AwstatsFile
 		{
 			if (!isset($this->data[$section_name][$key]))
 			{
-				$this->data[$key][$key] = $row;
+				$this->data[$section_name][$key] = $row;
 				continue;
 			}
 
@@ -372,7 +372,7 @@ class AwstatsMerger extends AwstatsFile
 		{
 			if (!isset($this->data[$section_name][$key]))
 			{
-				$this->data[$key][$key] = $row;
+				$this->data[$section_name][$key] = $row;
 				continue;
 			}
 
