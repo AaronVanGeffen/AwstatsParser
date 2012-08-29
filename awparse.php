@@ -209,6 +209,15 @@ class AwstatsMerger extends AwstatsFile
 				$this->data['GENERAL'][$item] = $row;
 				continue;
 			}
+			else
+			{
+				if ($item == 'FirstTime')
+					$this->data['GENERAL'][$item][0] = min($row[0], $this->data['GENERAL'][$item][0]);
+				else if (($item == 'LastTime') || ($item == 'LastUpdate'))
+					$this->data['GENERAL'][$item][0] = max($row[0], $this->data['GENERAL'][$item][0]);
+				else if ($item == 'TotalVisits')
+					$this->data['GENERAL'][$item][0] += $row[0];
+			}
 		}
 	}
 
