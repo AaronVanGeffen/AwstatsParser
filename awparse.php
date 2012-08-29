@@ -14,11 +14,11 @@
 
 // Not running PHP-CLI?
 if (isset($_SERVER['HTTP_HOST']) || !isset($_SERVER['argv'], $_SERVER['argc']))
-	die('This script is intended for use with PHP-CLI only.');
+	die("This script is intended for use with PHP-CLI only.\n");
 
 // Klingon functions have arguments! (Note: argument 0 is the script's file name.)
 if ($_SERVER['argc'] <= 1)
-	die('Not enough arguments. Expecting every argument to be an awstats file to include. Pipe to save the script\'s output. Example usage: awparse.php awstats062010.txt awstats072010.txt > awstats06072010.txt');
+	die("Not enough arguments. Expecting every argument to be an awstats file to include. Pipe to save the script\'s output. Example usage: awparse.php awstats062010.txt awstats072010.txt > awstats06072010.txt\n");
 
 // Instantiate a new merger class.
 $stats = new AwstatsMerger();
@@ -274,7 +274,7 @@ class AwstatsMerger extends AwstatsFile
 	 */
 	private function merge_emailsender(&$rows, &$section_name)
 	{
-		return $this->merge_worm(&$rows, &$section_name);
+		return $this->merge_worm($rows, $section_name);
 	}
 
 	/**
@@ -285,7 +285,7 @@ class AwstatsMerger extends AwstatsFile
 	 */
 	private function merge_emailreceiver(&$rows, &$section_name)
 	{
-		return $this->merge_worm(&$rows, &$section_name);
+		return $this->merge_worm($rows, $section_name);
 	}
 
 	/**
