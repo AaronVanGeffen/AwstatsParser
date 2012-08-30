@@ -1,14 +1,21 @@
 <?php
 /*
 	AWSTATS DATA FILE PARSER / MERGER / GENERATOR ==============================
-	@version: 1.1
-	@date: 2012-08-29
+	@version: 1.2
+	@date: 2012-08-30
 	@author: Aaron van Geffen
 	@website: http://aaronweb.net/
 	@license: BSD
 
 	VERSION HISTORY ============================================================
+	version 1.2 (2012-08-30)
+	* Merged patches by Dave Dykstra:
+	  * Do a better job at merging FirstTime, LastTime, LastUpdate and TotalVisits.
+	  * Fixed bug that caused some data to be merged incorrectly.
+	  * Treat 3rd and 4th indexes as dates when merging VISITOR and EXTRA_1 sections.
+
 	version 1.1 (2012-08-29)
+	* Released on GitHub.
 	* Removed unnecessary call-time pass-by-references;
 	* Added newlines to error messages;
 
@@ -30,7 +37,7 @@ if (isset($_SERVER['HTTP_HOST']) || !isset($_SERVER['argv'], $_SERVER['argc']))
 
 // Klingon functions have arguments! (Note: argument 0 is the script's file name.)
 if ($_SERVER['argc'] <= 1)
-	die("Not enough arguments. Expecting every argument to be an awstats file to include. Pipe to save the script\'s output. Example usage: awparse.php awstats062010.txt awstats072010.txt > awstats06072010.txt\n");
+	die("Not enough arguments. Expecting every argument to be an awstats file to parse. Pipe to save the script's output.\nExample usage: awparse.php awstats062010.txt awstats072010.txt > awstats06072010.txt\n");
 
 // Instantiate a new merger class.
 $stats = new AwstatsMerger();
@@ -52,7 +59,7 @@ echo $stats->getFileContents();
  */
 abstract class AwstatsFile
 {
-	public $data = array();
+	protected $data = array();
 
 	public function getFileContents()
 	{
@@ -213,9 +220,9 @@ class AwstatsMerger extends AwstatsFile
 			{
 				if ($item == 'FirstTime')
 					$this->data['GENERAL'][$item][0] = min($row[0], $this->data['GENERAL'][$item][0]);
-				else if (($item == 'LastTime') || ($item == 'LastUpdate'))
+				elseif ($item == 'LastTime' || $item == 'LastUpdate')
 					$this->data['GENERAL'][$item][0] = max($row[0], $this->data['GENERAL'][$item][0]);
-				else if ($item == 'TotalVisits')
+				elseif ($item == 'TotalVisits')
 					$this->data['GENERAL'][$item][0] += $row[0];
 			}
 		}
@@ -359,12 +366,14 @@ class AwstatsMerger extends AwstatsFile
 			// Indexes 3 and 4 are dates so take max instead of sum
 			// For indexes above 4 take whichever one comes first
 			foreach ($row as $num => $stats)
+			{
 				if ($num <= 2)
 					$this->data[$section_name][$key][$num] = isset($this->data[$section_name][$key][$num]) ? $this->data[$section_name][$key][$num] + $stats : $stats;
-				else if ($num <= 4)
-					$this->data[$section_name][$key][$num] = isset($this->data[$section_name][$key][$num]) ? max ($this->data[$section_name][$key][$num], $stats) : $stats;
-			        else if (!isset($this->data[$section_name][$key][$num]))
+				elseif ($num <= 4)
+					$this->data[$section_name][$key][$num] = isset($this->data[$section_name][$key][$num]) ? max($this->data[$section_name][$key][$num], $stats) : $stats;
+				elseif (!isset($this->data[$section_name][$key][$num]))
 					$this->data[$section_name][$key][$num] = $stats;
+			}
 		}
 	}
 
@@ -375,9 +384,8 @@ class AwstatsMerger extends AwstatsFile
 	 */
 	private function merge_visitor(&$rows, &$section_name)
 	{
-		// Note that index 3 is a start date and the max will be
-		//  taken when it should technically be min but it doesn't
-		//  matter because the start date is never used
+		// Note that index 3 is a start date and the max will be taken when it
+		// should technically be min but it doesn't matter because the start date is never used.
 		return $this->helper_sum_with_dates($rows, $section_name);
 	}
 
