@@ -52,7 +52,7 @@ echo $stats->getFileContents();
  */
 abstract class AwstatsFile
 {
-	protected $data = array();
+	public $data = array();
 
 	public function getFileContents()
 	{
@@ -209,6 +209,15 @@ class AwstatsMerger extends AwstatsFile
 				$this->data['GENERAL'][$item] = $row;
 				continue;
 			}
+			else
+			{
+				if ($item == 'FirstTime')
+					$this->data['GENERAL'][$item][0] = min($row[0], $this->data['GENERAL'][$item][0]);
+				else if (($item == 'LastTime') || ($item == 'LastUpdate'))
+					$this->data['GENERAL'][$item][0] = max($row[0], $this->data['GENERAL'][$item][0]);
+				else if ($item == 'TotalVisits')
+					$this->data['GENERAL'][$item][0] += $row[0];
+			}
 		}
 	}
 
@@ -332,24 +341,54 @@ class AwstatsMerger extends AwstatsFile
 	}
 
 	/**
+	 * Merges sections that have dates in indexes 3 and 4 (if present)
+	 * @param $rows existing set of rows
+	 * @param $section_name identifier of the current section
+	 */
+	private function helper_sum_with_dates(&$rows, &$section_name)
+	{
+		foreach ($rows as $key => $row)
+		{
+			if (!isset($this->data[$section_name][$key]))
+			{
+				$this->data[$section_name][$key] = $row;
+				continue;
+			}
+
+			// Merge rows, taking into account that not all entries have the same number of data items
+			// Indexes 3 and 4 are dates so take max instead of sum
+			// For indexes above 4 take whichever one comes first
+			foreach ($row as $num => $stats)
+				if ($num <= 2)
+					$this->data[$section_name][$key][$num] = isset($this->data[$section_name][$key][$num]) ? $this->data[$section_name][$key][$num] + $stats : $stats;
+				else if ($num <= 4)
+					$this->data[$section_name][$key][$num] = isset($this->data[$section_name][$key][$num]) ? max ($this->data[$section_name][$key][$num], $stats) : $stats;
+			        else if (!isset($this->data[$section_name][$key][$num]))
+					$this->data[$section_name][$key][$num] = $stats;
+		}
+	}
+
+	/**
 	 * Merges visitor statistics.
 	 * @param $rows existing set of rows
 	 * @param $section_name identifier of the current section
 	 */
 	private function merge_visitor(&$rows, &$section_name)
 	{
-		foreach ($rows as $key => $row)
-		{
-			if (!isset($this->data[$section_name][$key]))
-			{
-				$this->data[$key][$key] = $row;
-				continue;
-			}
+		// Note that index 3 is a start date and the max will be
+		//  taken when it should technically be min but it doesn't
+		//  matter because the start date is never used
+		return $this->helper_sum_with_dates($rows, $section_name);
+	}
 
-			// Merge rows, taking in account that not all vistors have a start and end date of their visit set.
-			foreach ($row as $num => $stats)
-				$this->data[$section_name][$key][$num] = isset($this->data[$section_name][$key][$num]) ? $this->data[$section_name][$key][$num] + $stats : $stats;
-		}
+	/**
+	 * Merges extra_1 statistics.
+	 * @param $rows existing set of rows
+	 * @param $section_name identifier of the current section
+	 */
+	private function merge_extra_1(&$rows, &$section_name)
+	{
+		return $this->helper_sum_with_dates($rows, $section_name);
 	}
 
 	/**
@@ -363,7 +402,7 @@ class AwstatsMerger extends AwstatsFile
 		{
 			if (!isset($this->data[$section_name][$key]))
 			{
-				$this->data[$key][$key] = $row;
+				$this->data[$section_name][$key] = $row;
 				continue;
 			}
 
