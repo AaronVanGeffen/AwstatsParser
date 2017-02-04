@@ -29,6 +29,12 @@ abstract class AwstatsFile
 		return $contents;
 	}
 
+	public function getSection($section)
+	{
+		$section = strtoupper($section);
+		return isset($this->data[$section]) ? $this->data[$section] : [];
+	}
+
 	public function writeFileContents($filename)
 	{
 		file_put_contents($filename, $this->getFileContents());

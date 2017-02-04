@@ -2,6 +2,7 @@
 
 ## version 1.3 (2017-02-04)
 * Repackaged the classes for easy use with autoloaders and composer.
+* Add getSection method to AwstatsFile class.
 
 ## version 1.2 (2012-08-30)
 * Merged patches by Dave Dykstra:
