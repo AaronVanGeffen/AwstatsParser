@@ -1,4 +1,12 @@
 <?php
+/*
+Awstats Data File Parser / Merger / Generator
+@version: 1.3
+@date: 2017-02-04
+@author: Aaron van Geffen
+@website: https://aaronweb.net/
+@license: BSD
+*/
 
 /**
  * Class that takes care of merging multiple instances of AwstatsFile into one AwstatsFile.
