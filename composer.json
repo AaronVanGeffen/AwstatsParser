@@ -1,0 +1,22 @@
+{
+    "name": "aaronvangeffen/awstatsparser",
+    "type": "library",
+    "description": "A series of classes to help read and merge Awstats data files",
+    "keywords": ["awstats","statistics","merge"],
+    "homepage": "https://github.com/AaronVanGeffen/AwstatsParser",
+    "license": "BSD-2-Clause",
+    "authors": [
+        {
+            "name": "Aaron van Geffen",
+            "email": "aaron@aaronweb.net",
+            "homepage": "https://aaronweb.net/",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": ">=5.3.0"
+    },
+    "autoload": {
+        "classmap": ["AwstatsParser/"]
+    }
+}
