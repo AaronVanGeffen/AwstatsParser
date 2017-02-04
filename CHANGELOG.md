@@ -1,0 +1,18 @@
+# AwstatsParser changelog
+
+## version 1.3 (2017-02-04)
+* Repackaged the classes for easy use with autoloaders and composer.
+
+## version 1.2 (2012-08-30)
+* Merged patches by Dave Dykstra:
+  * Do a better job at merging FirstTime, LastTime, LastUpdate and TotalVisits.
+  * Fixed bug that caused some data to be merged incorrectly.
+  * Treat 3rd and 4th indexes as dates when merging VISITOR and EXTRA_1 sections.
+
+## version 1.1 (2012-08-29)
+* Released on GitHub.
+* Removed unnecessary call-time pass-by-references;
+* Added newlines to error messages;
+
+## version 1.0 (2010-06-19)
+* Initial release.
