@@ -48,7 +48,7 @@ class AwstatsFromFile extends AwstatsFile
 			$str = trim(fgets($fp));
 		while (!feof($fp) && strpos($str, "BEGIN_") === false);
 
-		return !feof($fp) ? substr($str, 6, strrpos($str, ' ') - 6) : false;
+		return !feof($fp) ? substr($str, 6, strpos($str, ' ') - 6) : false;
 	}
 
 	/**

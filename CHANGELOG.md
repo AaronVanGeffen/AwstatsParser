@@ -1,5 +1,8 @@
 # AwstatsParser changelog
 
+## version 1.4 (2017-05-04)
+* Read section names until the first space. Fixes edge case reading the OS section.
+
 ## version 1.3 (2017-02-04)
 * Repackaged the classes for easy use with autoloaders and composer.
 * Add getSection method to AwstatsFile class.
