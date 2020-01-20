@@ -68,7 +68,7 @@ class AwstatsFromFile extends AwstatsFile
 			if (strpos($str, 'END_') !== false)
 				break;
 
-			if ($str{0} == "#")
+			if ($str[0] == "#")
 				continue;
 
 			$row = explode(' ', $str);
