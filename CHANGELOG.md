@@ -1,5 +1,8 @@
 # AwstatsParser changelog
 
+## version 1.4.1 (2020-01-20)
+* Change braces to brackets to address a PHP 7.4 deprecation warning.
+
 ## version 1.4 (2017-05-04)
 * Read section names until the first space. Fixes edge case reading the OS section.
 
