@@ -43,7 +43,7 @@ class AwstatsMerger extends AwstatsFile
 					continue;
 
 				// Few sections require us to sort ascending by their keys...
-				if (in_array($section_name, array('TIME', 'DAY')))
+				if (in_array($section_name, ['TIME', 'DAY']))
 				{
 					ksort($this->data[$section_name]);
 					continue;

@@ -13,7 +13,7 @@ Awstats Data File Parser / Merger / Generator
  */
 abstract class AwstatsFile
 {
-	protected $data = array();
+	protected $data = [];
 
 	public function getFileContents()
 	{

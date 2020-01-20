@@ -56,7 +56,7 @@ class AwstatsFromFile extends AwstatsFile
 	 */
 	private function parse_section(&$fp)
 	{
-		$stats = array();
+		$stats = [];
 
 		do
 		{
