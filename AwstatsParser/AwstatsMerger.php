@@ -305,9 +305,17 @@ class AwstatsMerger
 				continue;
 			}
 
-			foreach ($row as $num => $stats)
+			foreach ($row as $num => $valueB)
 			{
-				$rows[$key][$num] += $stats;
+				$valueA = $rows[$key][$num];
+				if (is_numeric($valueA) && is_numeric($valueB))
+					$value = $valueA + $valueB;
+				elseif (is_numeric($valueA))
+					$value = $valueB;
+				else
+					$value = $valueA;
+
+				$rows[$key][$num] = $value;
 			}
 		}
 		return $rows;
