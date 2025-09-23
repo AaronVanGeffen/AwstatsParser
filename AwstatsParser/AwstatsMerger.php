@@ -9,210 +9,246 @@ Awstats Data File Parser / Merger / Generator
 */
 
 /**
- * Class that takes care of merging multiple instances of AwstatsFile into one AwstatsFile.
+ * Class that takes care of merging multiple instances of AwstatsFile into one file.
  */
-class AwstatsMerger extends AwstatsFile
+class AwstatsMerger
 {
+	private array $files = [];
+	private array $sections = [];
+
 	/**
 	 * Adds (merges) an existing AwstatsFile instance to this instance.
 	 * @param $file AwstatsFile instance
 	 */
 	public function add(AwstatsFile $file)
 	{
-		foreach ($file->data as $section_name => $rows)
+		$this->files[] = $file;
+
+		$this->sections = array_unique(array_merge($this->sections, $file->getSections()));
+	}
+
+	/**
+	 * Writes the current file to the output buffer.
+	 * Legacy function interface; offered for compatibility/transition purposes.
+	 *
+	 * @deprecated Use writeFileContents directly
+	 */
+	public function getFileContents()
+	{
+		return $this->writeFileContents('php://output');
+	}
+
+	public function getSection(string $section)
+	{
+		if (!$this->hasSection($section))
+			throw new DomainException('Unknown section: ' .  $section);
+
+		// Does this section have its own merge function?
+		$merge_func = 'merge_' . strtolower($section);
+		if (!method_exists($this, $merge_func))
+			$merge_func = 'helper_sum_merge';
+
+		// Merge data for this section from all files.
+		$rows = [];
+		foreach ($this->files as $file)
 		{
-			// Is this the first time this type of statistic is passed?
-			if (empty($this->data[$section_name]))
-			{
-				$this->data[$section_name] = $rows;
+			if (!$file->hasSection($section))
 				continue;
-			}
-			// The hard way: merge stats.
-			else
-			{
-				// Does this section have its own merge function?
-				$merge_func = 'merge_' . strtolower($section_name);
-				if (method_exists($this, $merge_func))
-					$this->$merge_func($rows, $section_name);
-				// Use the generic merge function for basic addition.
-				else
-					$this->helper_sum_merge($rows, $section_name);
 
-				// Prevent unnecessary sorting.
-				if ($section_name == 'GENERAL')
-					continue;
-
-				// Few sections require us to sort ascending by their keys...
-				if (in_array($section_name, ['TIME', 'DAY']))
-				{
-					ksort($this->data[$section_name]);
-					continue;
-				}
-
-				// Other sections require us to order descending by their first value.
-				uasort($this->data[$section_name], 'AwstatsMerger::helper_sort_desc');
-			}
+			$fileRows = $file->getSection($section);
+			$rows = $this->$merge_func($rows, $fileRows);
+			unset($fileRows);
 		}
+
+		// Prevent unnecessary sorting.
+		if ($section == 'general')
+			return $rows;
+
+		// Few sections require us to sort ascending by their keys...
+		if (in_array($section, ['time', 'day']))
+		{
+			ksort($rows);
+			return $rows;
+		}
+
+		// Other sections require us to order descending by their first value.
+		uasort($rows, 'AwstatsMerger::helper_sort_desc');
+		return $rows;
+	}
+
+	public function getSections()
+	{
+		return $this->sections;
+	}
+
+	public function hasSection(string $section)
+	{
+		return in_array($section, $this->sections);
 	}
 
 	/**
 	 * Merges general statistics.
 	 * TODO: improve this? (How? Suggestions are welcome.)
-	 * @param $rows existing set of rows
-	 * @param $section_name identifier of the current section
+	 * @param $rows existing set of rows to merge into
+	 * @param $newRows rows to merge into $rows
 	 */
-	private function merge_general(&$rows, &$section_name)
+	private static function merge_general(array $rows, array $newRows)
 	{
-		foreach ($rows as $item => $row)
+		foreach ($newRows as $item => $row)
 		{
-			if (!isset($this->data['GENERAL'][$item]))
+			if (!isset($rows[$item]))
 			{
-				$this->data['GENERAL'][$item] = $row;
+				$rows[$item] = $row;
 				continue;
 			}
 			else
 			{
 				if ($item == 'FirstTime')
-					$this->data['GENERAL'][$item][0] = min($row[0], $this->data['GENERAL'][$item][0]);
+					$rows[$item][0] = min($row[0], $rows[$item][0]);
 				elseif ($item == 'LastTime' || $item == 'LastUpdate')
-					$this->data['GENERAL'][$item][0] = max($row[0], $this->data['GENERAL'][$item][0]);
+					$rows[$item][0] = max($row[0], $rows[$item][0]);
 				elseif ($item == 'TotalVisits')
-					$this->data['GENERAL'][$item][0] += $row[0];
+					$rows[$item][0] += $row[0];
 			}
 		}
+		return $rows;
 	}
 
 	/**
 	 * Merges login statistics.
-	 * @param $rows existing set of rows
-	 * @param $section_name identifier of the current section
+	 * @param $rows existing set of rows to merge into
+	 * @param $newRows rows to merge into $rows
 	 */
-	private function merge_login(&$rows, &$section_name)
+	private static function merge_login(array $rows, array $newRows)
 	{
-		foreach ($rows as $login => $row)
+		foreach ($newRows as $login => $row)
 		{
-			if (!isset($this->data['LOGIN'][$login]))
+			if (!isset($rows[$login]))
 			{
-				$this->data['LOGIN'][$login] = $row;
+				$rows[$login] = $row;
 				continue;
 			}
 
-			$this->data['LOGIN'][$login][0] += $row[0];
-			$this->data['LOGIN'][$login][1] += $row[1];
-			$this->data['LOGIN'][$login][2] += $row[2];
-			$this->data['LOGIN'][$login][3] = max($this->data['LOGIN'][$login][3], $row[3]);
+			$rows[$login][0] += $row[0];
+			$rows[$login][1] += $row[1];
+			$rows[$login][2] += $row[2];
+			$rows[$login][3] = max($rows[$login][3], $row[3]);
 		}
+		return $rows;
 	}
 
 	/**
 	 * Merges robot statistics.
-	 * @param $rows existing set of rows
-	 * @param $section_name identifier of the current section
+	 * @param $rows existing set of rows to merge into
+	 * @param $newRows rows to merge into $rows
 	 */
-	private function merge_robot(&$rows, &$section_name)
+	private static function merge_robot(array $rows, array $newRows)
 	{
-		foreach ($rows as $robot => $row)
+		foreach ($newRows as $robot => $row)
 		{
-			if (!isset($this->data['ROBOT'][$robot]))
+			if (!isset($rows[$robot]))
 			{
-				$this->data['ROBOT'][$robot] = $row;
+				$rows[$robot] = $row;
 				continue;
 			}
 
-			$this->data['ROBOT'][$robot][0] += $row[0];
-			$this->data['ROBOT'][$robot][1] += $row[1];
-			$this->data['ROBOT'][$robot][2] = max($this->data['ROBOT'][$robot][2], $row[2]);
-			$this->data['ROBOT'][$robot][3] += $row[3];
+			$rows[$robot][0] += $row[0];
+			$rows[$robot][1] += $row[1];
+			$rows[$robot][2] = max($rows[$robot][2], $row[2]);
+			$rows[$robot][3] += $row[3];
 		}
+		return $rows;
 	}
 
 	/**
 	 * Merges worm statistics.
 	 * Note: handled the same way as emailsender and emailreceiver.
-	 * @param $rows existing set of rows
-	 * @param $section_name identifier of the current section
+	 * @param $rows existing set of rows to merge into
+	 * @param $newRows rows to merge into $rows
 	 */
-	private function merge_worm(&$rows, &$section_name)
+	private static function merge_worm(array $rows, array $newRows)
 	{
-		foreach ($rows as $worm => $row)
+		foreach ($newRows as $worm => $row)
 		{
-			if (!isset($this->data[$section_name][$worm]))
+			if (!isset($rows[$worm]))
 			{
-				$this->data[$section_name][$worm] = $row;
+				$rows[$worm] = $row;
 				continue;
 			}
 
-			$this->data[$section_name][$worm][0] += $row[0];
-			$this->data[$section_name][$worm][1] += $row[1];
-			$this->data[$section_name][$worm][2] = max($this->data[$section_name][$worm][2], $row[2]);
+			$rows[$worm][0] += $row[0];
+			$rows[$worm][1] += $row[1];
+			$rows[$worm][2] = max($rows[$worm][2], $row[2]);
 		}
+		return $rows;
 	}
 
 	/**
 	 * Merges email sender statistics.
 	 * Note: handled the same way as emailreceiver and worm.
-	 * @param $rows existing set of rows
-	 * @param $section_name identifier of the current section
+	 * @param $rows existing set of rows to merge into
+	 * @param $newRows rows to merge into $rows
 	 */
-	private function merge_emailsender(&$rows, &$section_name)
+	private static function merge_emailsender(array $rows, array $newRows)
 	{
-		return $this->merge_worm($rows, $section_name);
+		return self::merge_worm($rows, $newRows);
 	}
 
 	/**
 	 * Merges email receiver statistics.
 	 * Note: handled the same way as emailsender and worm.
-	 * @param $rows existing set of rows
-	 * @param $section_name identifier of the current section
+	 * @param $rows existing set of rows to merge into
+	 * @param $newRows rows to merge into $rows
 	 */
-	private function merge_emailreceiver(&$rows, &$section_name)
+	private static function merge_emailreceiver(array $rows, array $newRows)
 	{
-		return $this->merge_worm($rows, $section_name);
+		return self::merge_worm($rows, $newRows);
 	}
 
 	/**
 	 * Merges unknown referer statistics.
 	 * Note: handled the same way as unknownrefererbrowser.
-	 * @param $rows existing set of rows
-	 * @param $section_name identifier of the current section
+	 * @param $rows existing set of rows to merge into
+	 * @param $newRows rows to merge into $rows
 	 */
-	private function merge_unknownreferer(&$rows, &$section_name)
+	private static function merge_unknownreferer(array $rows, array $newRows)
 	{
-		foreach ($rows as $referer => $row)
+		foreach ($newRows as $referer => $row)
 		{
-			if (!isset($this->data[$section_name][$referer]))
+			if (!isset($rows[$referer]))
 			{
-				$this->data[$section_name][$referer] = $row;
+				$rows[$referer] = $row;
 				continue;
 			}
 
-			$this->data[$section_name][$referer][0] = max($this->data[$section_name][$referer][0], $row[0]);
+			$rows[$referer][0] = max($rows[$referer][0], $row[0]);
 		}
+		return $rows;
 	}
 
 	/**
 	 * Merges unknown referer browser statistics.
 	 * Note: handled the same way as unknownreferer.
-	 * @param $rows existing set of rows
-	 * @param $section_name identifier of the current section
+	 * @param $rows existing set of rows to merge into
+	 * @param $newRows rows to merge into $rows
 	 */
-	private function merge_unknownrefererbrowser(&$rows, &$section_name)
+	private static function merge_unknownrefererbrowser(array $rows, array $newRows)
 	{
-		return $this->merge_unknownreferer($rows, $section_name);
+		return self::merge_unknownreferer($rows, $newRows);
 	}
 
 	/**
 	 * Merges sections that have dates in indexes 3 and 4 (if present)
-	 * @param $rows existing set of rows
-	 * @param $section_name identifier of the current section
+	 * @param $rows existing set of rows to merge into
+	 * @param $newRows rows to merge into $rows
 	 */
-	private function helper_sum_with_dates(&$rows, &$section_name)
+	private static function helper_sum_with_dates(array $rows, array $newRows)
 	{
-		foreach ($rows as $key => $row)
+		foreach ($newRows as $key => $row)
 		{
-			if (!isset($this->data[$section_name][$key]))
+			if (!isset($rows[$key]))
 			{
-				$this->data[$section_name][$key] = $row;
+				$rows[$key] = $row;
 				continue;
 			}
 
@@ -222,55 +258,59 @@ class AwstatsMerger extends AwstatsFile
 			foreach ($row as $num => $stats)
 			{
 				if ($num <= 2)
-					$this->data[$section_name][$key][$num] = isset($this->data[$section_name][$key][$num]) ? $this->data[$section_name][$key][$num] + $stats : $stats;
+					$rows[$key][$num] = isset($rows[$key][$num]) ? $rows[$key][$num] + $stats : $stats;
 				elseif ($num <= 4)
-					$this->data[$section_name][$key][$num] = isset($this->data[$section_name][$key][$num]) ? max($this->data[$section_name][$key][$num], $stats) : $stats;
-				elseif (!isset($this->data[$section_name][$key][$num]))
-					$this->data[$section_name][$key][$num] = $stats;
+					$rows[$key][$num] = isset($rows[$key][$num]) ? max($rows[$key][$num], $stats) : $stats;
+				elseif (!isset($rows[$key][$num]))
+					$rows[$key][$num] = $stats;
 			}
 		}
+		return $rows;
 	}
 
 	/**
 	 * Merges visitor statistics.
-	 * @param $rows existing set of rows
-	 * @param $section_name identifier of the current section
+	 * @param $rows existing set of rows to merge into
+	 * @param $newRows rows to merge into $rows
 	 */
-	private function merge_visitor(&$rows, &$section_name)
+	private static function merge_visitor(array $rows, array $newRows)
 	{
 		// Note that index 3 is a start date and the max will be taken when it
 		// should technically be min but it doesn't matter because the start date is never used.
-		return $this->helper_sum_with_dates($rows, $section_name);
+		return self::helper_sum_with_dates($rows, $newRows);
 	}
 
 	/**
 	 * Merges extra_1 statistics.
-	 * @param $rows existing set of rows
-	 * @param $section_name identifier of the current section
+	 * @param $rows existing set of rows to merge into
+	 * @param $newRows rows to merge into $rows
 	 */
-	private function merge_extra_1(&$rows, &$section_name)
+	private static function merge_extra_1(array $rows, array $newRows)
 	{
-		return $this->helper_sum_with_dates($rows, $section_name);
+		return self::helper_sum_with_dates($rows, $newRows);
 	}
 
 	/**
 	 * Merges statistics by simply taking the sum of existing rows.
-	 * @param $rows existing set of rows
-	 * @param $section_name identifier of the current section
+	 * @param $rows existing set of rows to merge into
+	 * @param $newRows rows to merge into $rows
 	 */
-	private function helper_sum_merge(&$rows, &$section_name)
+	private static function helper_sum_merge(array $rows, array $newRows)
 	{
-		foreach ($rows as $key => $row)
+		foreach ($newRows as $key => $row)
 		{
-			if (!isset($this->data[$section_name][$key]))
+			if (!isset($rows[$key]))
 			{
-				$this->data[$section_name][$key] = $row;
+				$rows[$key] = $row;
 				continue;
 			}
 
 			foreach ($row as $num => $stats)
-				$this->data[$section_name][$key][$num] += $stats;
+			{
+				$rows[$key][$num] += $stats;
+			}
 		}
+		return $rows;
 	}
 
 	/**
@@ -286,4 +326,27 @@ class AwstatsMerger extends AwstatsFile
 			return $a[0] > $b[0] ? -1 : 1; // sorts descending
 	}
 
+	/**
+	 * Write the current file to a file.
+	 */
+	public function writeFileContents(mixed $target)
+	{
+		if (!is_resource($target))
+			$target = fopen($target, 'w');
+
+		fwrite($target, "AWSTATS DATA FILE 6.9 (build 1.925)\n\n");
+		foreach ($this->sections as $section_name)
+		{
+			echo $section_name, "\n";
+			$rows = $this->getSection($section_name);
+			fwrite($target, 'BEGIN_' . strtoupper($section_name) . ' ' . count($rows) . "\n");
+
+			foreach ($rows as $key => $row)
+				fwrite($target, $key . ' ' . implode(' ', $row) . "\n");
+
+			fwrite($target, 'END_' . strtoupper($section_name) . "\n\n");
+		}
+
+		fclose($target);
+	}
 }
