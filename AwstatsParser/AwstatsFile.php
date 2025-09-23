@@ -9,34 +9,115 @@ Awstats Data File Parser / Merger / Generator
 */
 
 /**
- * Abstract class that allows generalization of Awstats files.
+ * Parses an Awstats statistics file.
  */
-abstract class AwstatsFile
+class AwstatsFile
 {
-	protected $data = [];
+	protected $handle;
+	protected array $sections;
 
+	/**
+	 * Opens the designated file and indexes all sections in it.
+	 */
+	public function __construct(string $filename)
+	{
+		if (!$this->handle = fopen($filename, 'r'))
+			die('File not found: ' . $filename);
+
+		$this->populateSectionMap();
+	}
+
+	/**
+	 * Writes the current file to the output buffer.
+	 * Legacy function interface; offered for compatibility/transition purposes.
+	 *
+	 * @deprecated Use writeFileContents directly
+	 */
 	public function getFileContents()
 	{
-		$contents = "AWSTATS DATA FILE 6.9 (build 1.925)\n\n";
-		foreach ($this->data as $section_name => $rows)
+		return $this->writeFileContents('php://output');
+	}
+
+	/**
+	 * Processes all rows for particular section into an array of arrays.
+	 */
+	public function getSection(string $section)
+	{
+		if (!$this->hasSection($section))
+			throw new DomainException('Unknown section: ' .  $section);
+
+		fseek($this->handle, $this->sections[$section]);
+
+		$rows = [];
+		while (!feof($this->handle))
 		{
-			$contents .= 'BEGIN_' . $section_name . ' ' . count($rows) . "\n";
-			foreach ($rows as $key => $row)
-				$contents .= $key . ' ' . implode(' ', $row) . "\n";
-			$contents .= 'END_' . $section_name . "\n\n";
+			$line = trim(fgets($this->handle));
+			if (str_starts_with($line, 'END_'))
+				break;
+
+			if ($line[0] == "#")
+				continue;
+
+			$row = explode(' ', $line);
+			$key = array_shift($row);
+			$rows[$key] = $row;
 		}
 
-		return $contents;
+		return $rows;
 	}
 
-	public function getSection($section)
+	/**
+	 * Returns an array of indexed sections.
+	 */
+	public function getSections()
 	{
-		$section = strtoupper($section);
-		return isset($this->data[$section]) ? $this->data[$section] : [];
+		return array_keys($this->sections);
 	}
 
-	public function writeFileContents($filename)
+	public function hasSection(string $section)
 	{
-		file_put_contents($filename, $this->getFileContents());
+		return isset($this->sections[$section]);
+	}
+
+	/**
+	 * Maps all sections in the current file, storing their positions.
+	 */
+	private function populateSectionMap()
+	{
+		fseek($this->handle, 0);
+
+		$this->sections = [];
+		while (!feof($this->handle))
+		{
+			$line = trim(fgets($this->handle));
+			if (!str_starts_with($line, 'BEGIN_'))
+				continue;
+
+			$section = strtolower(substr($line, 6, strpos($line, ' ') - 6));
+			$this->sections[$section] = ftell($this->handle);
+		}
+	}
+
+	/**
+	 * Write the current file to a file.
+	 */
+	public function writeFileContents(mixed $target)
+	{
+		if (!is_resource($target))
+			$target = fopen($target, 'w');
+
+		fwrite($target, "AWSTATS DATA FILE 6.9 (build 1.925)\n\n");
+		foreach ($this->sections as $section_name => $pos)
+		{
+			$rows = $this->getSection($section_name);
+			fwrite($target, 'BEGIN_' . strtoupper($section_name) . ' ' . count($rows) . "\n");
+
+			foreach ($rows as $key => $row)
+				fwrite($target, $key . ' ' . implode(' ', $row) . "\n");
+
+			fwrite($target, 'END_' . strtoupper($section_name) . "\n\n");
+		}
+
+		fclose($target);
 	}
 }
