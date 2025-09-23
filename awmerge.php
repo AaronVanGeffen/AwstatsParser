@@ -1,8 +1,8 @@
 <?php
 /*
 Awstats Data File Parser / Merger / Generator
-@version: 1.4.1
-@date: 2020-01-20
+@version: 2.0
+@date: 2025-09-23
 @author: Aaron van Geffen
 @website: https://aaronweb.net/
 @license: BSD

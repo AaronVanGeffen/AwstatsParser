@@ -8,9 +8,9 @@ This package contains a series of classes to help read and merge Awstats data fi
 
 The package contains three classes:
 
-* `AwstatsFromFile`, used to read existing Awstats statistics from file;
+* `AwstatsFile`, used to read existing Awstats statistics from file;
 * `AwstatsMerger`, used to merges instances of `AwstatsFile`;
-* `AwstatsFile`, which is an abstract class used to generalise the two.
+* `AwstatsFromFile`, a deprecated interface class.
 
 
 ## Merging files

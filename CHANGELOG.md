@@ -1,5 +1,11 @@
 # AwstatsParser changelog
 
+## version 2.0 (2025-09-23)
+* Sections are now processed as-needed, reducing memory requirements.
+* Fix package autoload path in example merge script (GitHub#4).
+* Fix merging http error sections with placeholder values (GitHub#5).
+* Deprecated: AwstatsFromFile is no longer used as an interface. Use AwstatsFile directly.
+
 ## version 1.4.1 (2020-01-20)
 * Change braces to brackets to address a PHP 7.4 deprecation warning.
 
