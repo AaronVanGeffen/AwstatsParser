@@ -342,7 +342,7 @@ class AwstatsMerger
 		if (!is_resource($target))
 			$target = fopen($target, 'w');
 
-		fwrite($target, "AWSTATS DATA FILE 6.9 (build 1.925)\n\n");
+		fwrite($target, "AWSTATS DATA FILE 7.8 (build 20200416)\n\n");
 		foreach ($this->sections as $section_name)
 		{
 			echo $section_name, "\n";
