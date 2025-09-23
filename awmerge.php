@@ -18,7 +18,7 @@ if ($_SERVER['argc'] <= 1)
 
 // Register a simple autoloader for example purposes...
 spl_autoload_register(function($className) {
-	require dirname(__FILE__) . '/src/AaronVanGeffen/AwstatsParser/' . $className . '.php';
+	require dirname(__FILE__) . '/AwstatsParser/' . $className . '.php';
 });
 
 // Instantiate a new merger class.
